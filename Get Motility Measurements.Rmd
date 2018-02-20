@@ -1,0 +1,126 @@
+---
+title: "Motility and Evenness"
+author: "Christopher Bolte"
+date: "February 20, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+**Part 1: Preparing Data**
+
+Load the following packages:
+
+```{r}
+library(dplyr)
+```
+
+
+Obtain the original CSV from either the '.Rdata' file, or from the UCD Shared Drive (it's large, over 10 gb). After loading the .csv, run the following line of code.
+
+
+```{r}
+new_det <- select(det, DetectDate, Detection_GPS, TagID, Location, Species, Release_Location, Release_Date, Release_GPS, Release_rkm = Release_RKm, Detect_rkm = Detection_RKm, Length_Type, Tag_Type)
+
+```
+
+Make Initial Data.Frames by individual species
+
+```{r}
+g_sturg <- new_det[new_det$Species == 'Green_Sturgeon', ]
+steelhead <- new_det[new_det$Species == 'Steelhead', ]
+sevengill <- new_det[new_det$Species == 'Sevengill_Shark', ]
+pikem <- new_det[new_det$Species == 'Sacramento_pikeminnow', ]
+lmb <- new_det[new_det$Species == 'Largemouth_bass', ]
+smb <- new_det[new_det$Species == 'Smallmouth_bass', ]
+striped <- new_det[new_det$Species == 'Striped_bass', ]
+white_cat <- new_det[new_det$Species == 'White_catfish', ]
+w_sturg <- new_det[new_det$Species == 'White_Sturgeon', ]
+chan_catfish <- new_det[new_det$Species == 'Channel_catfish', ]
+spotted <- new_det[new_det$Species == 'Spotted_bass', ]
+```
+
+**Part 2: Load the Following 2 Functions**
+
+Function: get_motility()
+
+```{r}
+get_motility <- function(df, low_rkm=0, high_rkm=550, species_name, str_startdate='2000-01-01 00:00:00', str_enddate='2100-01-01 00:00:00') {
+  det <- df[df$Detect_rkm > low_rkm & df$Detect_rkm < high_rkm, ] #Takes detections only within specified rkms
+  det <- df[df$DetectDate > str_startdate & df$DetectDate < str_enddate, ] #takes detections only within certain dates
+  det$Detect_rkm <- as.numeric(det$Detect_rkm)
+  det$Release_rkm <- as.numeric(det$Release_rkm)
+  det <- det[is.na(det$Detect_rkm) == FALSE, ]
+  det <- det[is.na(det$Release_rkm) == FALSE, ]
+  all_tags <- c(unique(det$TagID))
+  df_allmoves <- NULL
+  count <- 1
+  total_count <- length(all_tags)
+  print('Begin')
+  for (tag in all_tags) {
+    print(paste(count, '/', total_count))
+    ind_tag <- det[det$TagID == tag, ]
+    ind_tag <- ind_tag[order(ind_tag$DetectDate), ]
+    first_det <- min(ind_tag$DetectDate)
+    last_det <- max(ind_tag$DetectDate)
+    length <- ind_tag$Length[1]
+    all_rows <- c(1:nrow(ind_tag))
+    total_rkm <- abs(ind_tag$Release_rkm[1] - ind_tag$Detect_rkm[1])
+    for (row in all_rows) {
+      first_rkm <- ind_tag$Detect_rkm[row]
+      second_rkm <- ind_tag$Detect_rkm[row + 1]
+      if (row == nrow(ind_tag)) { #may need to add some subtleties to make sure that if the last detection is different from the second to last that this gets accounted for.
+        species <- species_name
+        df_allmoves <- rbind(df_allmoves, data.frame(tag, total_rkm, species, length, first_det, last_det))
+        break
+      }
+      if (first_rkm != second_rkm) {
+        diff_rkm <- abs(first_rkm - second_rkm)
+        total_rkm <- total_rkm + diff_rkm
+      }
+    }
+    count <- count + 1
+  }
+  return(df_allmoves)
+}
+```
+
+Function: all_motility()
+
+```{r}
+all_motility <- function(l_detections, v_names, a_str_startdate='2000-01-01 00:00:00', a_str_enddate='2100-01-01 00:00:00') {
+  total <- c(1:length(names))
+  df_all_motility <- NULL
+  if (length(l_detections) != length(v_names)) {
+    print('The length of the two vectors or lists are not equivalent')
+    break
+  }
+  for (t in total) {
+    df <- data.frame(l_detections[t])
+    species_name <- v_names[t]
+    df_moves <- get_motility(df, species = species_name, str_startdate = a_str_startdate, str_enddate = a_str_enddate)
+    df_all_motility <- rbind(df_all_motility, df_moves)
+  }
+  return(df_all_motility)
+}
+```
+
+
+**Execute and Obtain Output**
+
+Get the movements of ALL fish and then bind them into 1 large data frame with motility data for each fish. THIS WILL TAKE A LONG TIME!!!
+
+```{r}
+detections <- list(gsturg, steelhead, pikem, lmb, smb, striped, white_cat, w_sturg, chan_catfish, spotted)
+names <- c('green_sturgeon', 'steelhead', 'sacramento_pikeminnow', 'largemouth_bass', 'smallmouth_bass', 'striped_bass', 'white_catfish', 'white_sturgeon', 'channel_catfish', 'spotted_bass')
+
+
+#FILL IN THE FOLLOWING STATEMENT WITH PREFERRED DATES TO OBTAIN MOTILITY FOR ALL SPECIES
+
+#all_species_motility <- all_motility(l_detections = detections, v_names = names, a_str_startdate = , a_str_enddate = )
+```
+
+
