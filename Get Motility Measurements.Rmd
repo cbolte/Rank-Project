@@ -59,7 +59,7 @@ get_motility <- function(df, low_rkm=0, high_rkm=550, species_name, str_startdat
   df_allmoves <- NULL
   count <- 1
   total_count <- length(all_tags)
-  print('Begin')
+  print(species_name)
   for (tag in all_tags) {
     print(paste(count, '/', total_count))
     ind_tag <- det[det$TagID == tag, ]
@@ -114,7 +114,7 @@ all_motility <- function(l_detections, v_names, a_str_startdate='2000-01-01 00:0
 Get the movements of ALL fish and then bind them into 1 large data frame with motility data for each fish. THIS WILL TAKE A LONG TIME!!!
 
 ```{r}
-detections <- list(gsturg, steelhead, pikem, lmb, smb, striped, white_cat, w_sturg, chan_catfish, spotted)
+detections <- list(g_sturg, steelhead, pikem, lmb, smb, striped, white_cat, w_sturg, chan_catfish, spotted)
 names <- c('green_sturgeon', 'steelhead', 'sacramento_pikeminnow', 'largemouth_bass', 'smallmouth_bass', 'striped_bass', 'white_catfish', 'white_sturgeon', 'channel_catfish', 'spotted_bass')
 
 
