@@ -36,12 +36,14 @@ clean_bad_receivers <- function(df_all_detections, df_tag_list, taglist_colname,
         if (first_rkm != second_rkm & diff_rkm > upmove_rkm) {
           restriction <- 1
           print("Triggering Condition")
+          print(row)
           #If there is a difference greater than the specified threshold for a single movement, the following needs to occur
           #1. Identify the detection before the change.
           #2. Determine how many (which rows) detections are on the errant receiver before it changes.
           #3. Remove these detections
           #4. Continue at location where original row. is it possible to reset where the row is?
           start_bad_det <- row + 1 #this is the beginning of the bad detections from an errant receiver.
+          print(start_bad_det)
           #print(ind_tag[start_bad_det, ])
           new_rows <- c(start_bad_det:nrow(ind_tag)) #Gets detections from the start of the bad receiver to the end of that TagIDs detections
           #print(head(ind_tag))
@@ -76,11 +78,7 @@ new_striped <- clean_bad_receivers(df_all_detections = ind_striped,
                                    df_tag_list = ind_striped,
                                    taglist_colname = 'TagID', upmove_rkm = 100)
 
-#For next time, identify fish that will set off each criteria, then make sure that they can be added to eachother using the script.
-#Get Sample Fish that fit each of the criteria.
-
-
-
+#SCRIPT WORKS FOR SINGLE TAG
 ind_striped$Detect_rkm <- as.numeric(ind_striped$Detect_rkm)
 test_det <- subset(ind_striped, Detect_rkm > 0 & Detect_rkm < 540)
 
