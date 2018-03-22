@@ -1,0 +1,125 @@
+---
+title: "Eveness Data Preparation"
+author: "Christopher Bolte"
+date: "March 22, 2018"
+output: html_document
+---
+
+**Part 1: Preparing Data**
+
+Load the following packages:
+
+```{r}
+library(dplyr)
+library(ggplot2)
+```
+
+
+Obtain the original CSV from either the '.Rdata' file, or from the UCD Shared Drive (it's large, over 10 gb). After loading the .csv, run the following line of code.
+
+
+```{r}
+new_det <- select(det, DetectDate, Detection_GPS, TagID, Location, Species, Release_Location, Release_Date, Release_GPS, Release_rkm = Release_RKm, Detect_rkm = Detection_RKm, Length_Type, Tag_Type)
+
+```
+
+Load the Following TWO Functions:
+
+1. get_big_moves()   -- This function determines if there are any fish that have made a single movement over 100 rkm, then puts those fish's detections into a seperate data.frame.
+```{r}
+
+get_big_moves <- function(df_all_detections, taglist_colname = "TagID", rkm_threshold = 100) {
+  det <- df_all_detections
+  det <- det[is.na(det$Detect_rkm) == FALSE, ]
+  det <- det[is.null(det$Detect_rkm) == FALSE, ]
+  det <- det[det$Detect_rkm != 'NULL', ]
+  det <- det[det$Detect_rkm != 'NA', ]
+  det$Detect_rkm <- as.numeric(det$Detect_rkm)
+  all_tags <- unique(det[[taglist_colname]])
+  big_move_fish <- NULL
+  count <- 1
+  total_count <- length(all_tags)
+  for (tag in all_tags) {
+    print(paste(count, '/', total_count))
+    print(tag)
+    ind_tag <- det[det$TagID == tag, ]
+    ind_tag <- ind_tag[order(ind_tag$DetectDate), ]
+    if (nrow(ind_tag) > 0) {
+      all_rows <- c(1:nrow(ind_tag))
+      for (row in all_rows) {
+        if (row == nrow(ind_tag)) { #end the current iteration of the for-loop because nothing fits the other criteria.
+          print("There are no errant detections in the middle of this detection history above the specified threshold.")
+          break
+        }
+        first_rkm <- ind_tag$Detect_rkm[row]
+        second_rkm <- ind_tag$Detect_rkm[row + 1]
+        diff_rkm <- abs(second_rkm - first_rkm)
+        if (first_rkm != second_rkm & diff_rkm > rkm_threshold) {
+          print("Movement greater than river kilometer threshold detected.")
+          #Add detections to data.frame only with detections from these fish. In future data.frame, use unique() to get a list of TagIDs
+          #to put into a river kilometer plots.
+          big_move_fish <- rbind(big_move_fish, ind_tag)
+          print(paste('TagID', tag, 'Added to new data.frame', sep = ' '))
+          break
+        }
+      }
+    }
+    count <- count + 1
+  }
+  return(big_move_fish)
+}
+```
+
+
+plot_rkm_time_vemco   --  plots the river kilomter vs time for detections in a target data.frame
+
+```{r}
+plot_rkm_time_vemco <- function(df, pdf_name, int_rkm = -100, str_start_datetime = "2000-01-01 00:00:00", str_end_datetime = "2050-01-01 00:00:00") {
+  pdf(paste(pdf_name, ".pdf", sep = "" )) 
+  df_edit <- df
+  if (is.null(df_edit) == FALSE) {
+  df_edit <- subset(df, Detect_rkm > int_rkm)
+  df_edit <- subset(df_edit, DetectDate > str_start_datetime & DetectDate < str_end_datetime)
+  all_tags <- unique(df$TagID)
+  for (tag in all_tags) {
+    df_id <-subset(df_edit, df_edit$TagID == tag)
+    if (nrow(df_id) > 0) {
+      df_id <- df_id[order(df_id$DetectDate), ]
+      first_det <- min(df_id$DetectDate)
+      last_det <- max(df_id$DetectDate)
+      fish_move <- ggplot(df_id, aes(x=DetectDate, y=Detect_rkm, group = TagID)) +
+        geom_point() + geom_line() +
+        ggtitle(paste(tag, "from", first_det, "to", last_det)) +
+        xlab("Time After Release") +
+        ylab("River Kilometer")
+      plot(fish_move)
+      }
+    }
+  }
+  dev.off()
+}
+```
+
+
+Once those functions are loaded successfully, assign v_species to a vector of the species that you want to target, then run the following for loop. The function of this goes as follows.
+1. Generates a data.frame with all of the detections from the specified species.
+2. Dtermines which of those fish have allegedly made a movement over the specified number of river kilometers (default is 100)
+3. Makes river kilometer plots of the fish that meet this criteria.
+
+
+```{r}
+v_species <- c('Green_Sturgeon', 'Steelhead', 'Sevengill_Shark', 'Sacramento_pikeminnow', 'Largemouth_bass', 'Smallmouth_bass', 
+               'Striped_bass', 'White_catfish', 'White_Sturgeon', 'Channel_catfish', 'Spotted_bass')
+
+
+for (species in v_species) {
+  ind_species <- subset(new_det, Species == species)
+  ind_species %>%
+    get_big_moves %>%
+      plot_rkm_time_vemco(paste('All', species, 'RKM plots with movement over 100 rkm'))
+}
+```
+
+The final output from this should be river kilometer plots of individuals that have made a single movement of over 100 rkm. They will then need to be inspected to determine if the movements are acceptable.
+Individuals that require adjustment can then have the following code run to remove those errant detections.
+
